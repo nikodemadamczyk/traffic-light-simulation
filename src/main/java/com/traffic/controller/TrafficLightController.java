@@ -1,7 +1,6 @@
-package main.java.com.traffic.controller;
+package com.traffic.controller;
 
-
-import main.java.com.traffic.model.*;
+import com.traffic.model.*;
 
 import java.util.EnumMap;
 import java.util.Map;

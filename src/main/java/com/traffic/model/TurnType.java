@@ -1,4 +1,4 @@
-package main.java.com.traffic.model;
+package com.traffic.model;
 
 public enum TurnType {
     STRAIGHT,

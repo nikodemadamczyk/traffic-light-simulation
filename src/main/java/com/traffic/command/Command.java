@@ -1,4 +1,7 @@
 package com.traffic.command;
 
-public class Command {
+import com.traffic.simulation.SimulationContext;
+
+public interface Command {
+    void execute(SimulationContext context);
 }
