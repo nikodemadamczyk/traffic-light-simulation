@@ -9,6 +9,16 @@ public class Vehicle {
     private final TurnType turnType;
 
     public Vehicle(String vehicleId, Direction startRoad, Direction endRoad) {
+        if (vehicleId == null) {
+            throw new NullPointerException("Vehicle ID cannot be null");
+        }
+        if (startRoad == null) {
+            throw new NullPointerException("Start road cannot be null");
+        }
+        if (endRoad == null) {
+            throw new NullPointerException("End road cannot be null");
+        }
+
         this.vehicleId = vehicleId;
         this.startRoad = startRoad;
         this.endRoad = endRoad;
