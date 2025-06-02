@@ -15,6 +15,12 @@ public class JsonCommand {
     @JsonProperty("endRoad")
     private String endRoad;
 
+    @JsonProperty("vehicleType")
+    private String vehicleType;
+
+    @JsonProperty("trafficMode")
+    private String trafficMode;
+
     public String getType() {
         return type;
     }
@@ -45,5 +51,21 @@ public class JsonCommand {
 
     public void setEndRoad(String endRoad) {
         this.endRoad = endRoad;
+    }
+
+    public String getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(String vehicleType) {
+        this.vehicleType = vehicleType;
+    }
+
+    public String getTrafficMode() {
+        return trafficMode;
+    }
+
+    public void setTrafficMode(String trafficMode) {
+        this.trafficMode = trafficMode;
     }
 }

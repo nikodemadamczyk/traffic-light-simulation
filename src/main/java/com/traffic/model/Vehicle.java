@@ -7,8 +7,13 @@ public class Vehicle {
     private final Direction startRoad;
     private final Direction endRoad;
     private final TurnType turnType;
+    private final VehicleType vehicleType;
 
     public Vehicle(String vehicleId, Direction startRoad, Direction endRoad) {
+        this(vehicleId, startRoad, endRoad, VehicleType.CAR);
+    }
+
+    public Vehicle(String vehicleId, Direction startRoad, Direction endRoad, VehicleType vehicleType) {
         if (vehicleId == null) {
             throw new NullPointerException("Vehicle ID cannot be null");
         }
@@ -18,10 +23,14 @@ public class Vehicle {
         if (endRoad == null) {
             throw new NullPointerException("End road cannot be null");
         }
+        if (vehicleType == null) {
+            throw new NullPointerException("Vehicle type cannot be null");
+        }
 
         this.vehicleId = vehicleId;
         this.startRoad = startRoad;
         this.endRoad = endRoad;
+        this.vehicleType = vehicleType;
         this.turnType = determineTurnType(startRoad, endRoad);
     }
 
@@ -51,6 +60,18 @@ public class Vehicle {
         return turnType;
     }
 
+    public VehicleType getVehicleType() {
+        return vehicleType;
+    }
+
+    public boolean hasEmergencyPriority() {
+        return vehicleType.hasPriority();
+    }
+
+    public int getProcessingTime() {
+        return vehicleType.getProcessingTime();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -68,6 +89,7 @@ public class Vehicle {
     public String toString() {
         return "Vehicle{" +
                 "id='" + vehicleId + '\'' +
+                ", type=" + vehicleType +
                 ", from=" + startRoad +
                 ", to=" + endRoad +
                 ", turn=" + turnType +

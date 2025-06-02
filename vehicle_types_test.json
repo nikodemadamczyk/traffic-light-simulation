@@ -1,0 +1,48 @@
+{
+  "commands": [
+    {
+      "type": "setTrafficMode",
+      "trafficMode": "rush_hour"
+    },
+    {
+      "type": "addVehicle",
+      "vehicleId": "bus1",
+      "startRoad": "north",
+      "endRoad": "south",
+      "vehicleType": "bus"
+    },
+    {
+      "type": "addVehicle",
+      "vehicleId": "car1",
+      "startRoad": "north",
+      "endRoad": "south",
+      "vehicleType": "car"
+    },
+    {
+      "type": "addVehicle",
+      "vehicleId": "emergency1",
+      "startRoad": "east",
+      "endRoad": "west",
+      "vehicleType": "emergency"
+    },
+    {
+      "type": "step"
+    },
+    {
+      "type": "step"
+    },
+    {
+      "type": "setTrafficMode",
+      "trafficMode": "night"
+    },
+    {
+      "type": "addVehicle",
+      "vehicleId": "car2",
+      "startRoad": "west",
+      "endRoad": "east"
+    },
+    {
+      "type": "step"
+    }
+  ]
+}

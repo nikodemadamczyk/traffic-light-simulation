@@ -12,13 +12,21 @@ public class SimulationContext {
     private final List<List<String>> stepResults;
 
     public SimulationContext() {
+        this(TrafficMode.NORMAL);
+    }
+
+    public SimulationContext(TrafficMode trafficMode) {
         this.intersection = new Intersection();
-        this.controller = new TrafficLightController(intersection);
+        this.controller = new TrafficLightController(intersection, trafficMode);
         this.stepResults = new ArrayList<>();
     }
 
     public void addVehicle(String vehicleId, Direction startRoad, Direction endRoad) {
-        Vehicle vehicle = new Vehicle(vehicleId, startRoad, endRoad);
+        addVehicle(vehicleId, startRoad, endRoad, VehicleType.CAR);
+    }
+
+    public void addVehicle(String vehicleId, Direction startRoad, Direction endRoad, VehicleType vehicleType) {
+        Vehicle vehicle = new Vehicle(vehicleId, startRoad, endRoad, vehicleType);
         intersection.addVehicle(vehicle);
     }
 
@@ -53,10 +61,27 @@ public class SimulationContext {
 
     public void printCurrentState() {
         System.out.println("=== Current State ===");
-        System.out.println("Phase: " + controller.getCurrentPhase() + " (" + controller.getPhaseState() + ")");
+
+        if (controller.isEmergencyMode()) {
+            System.out.println("🚨 EMERGENCY MODE ACTIVE - Priority: " + controller.getEmergencyDirection());
+        } else {
+            System.out.println("Mode: " + controller.getTrafficMode() +
+                    " | Phase: " + controller.getCurrentPhase() +
+                    " (" + controller.getPhaseState() + ")");
+        }
+
         System.out.println("Waiting vehicles: N=" + intersection.getWaitingVehiclesCount(Direction.NORTH) +
                 ", S=" + intersection.getWaitingVehiclesCount(Direction.SOUTH) +
                 ", E=" + intersection.getWaitingVehiclesCount(Direction.EAST) +
                 ", W=" + intersection.getWaitingVehiclesCount(Direction.WEST));
+
+        // Show emergency vehicles if any
+        for (Direction direction : Direction.values()) {
+            Road road = intersection.getRoad(direction);
+            if (road.hasEmergencyVehicles()) {
+                System.out.println("🚨 Emergency vehicles on " + direction + ": " +
+                        road.getPriorityVehiclesCount());
+            }
+        }
     }
 }

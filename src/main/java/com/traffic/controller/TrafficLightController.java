@@ -6,23 +6,34 @@ import java.util.EnumMap;
 import java.util.Map;
 
 public class TrafficLightController {
-    private static final int MIN_GREEN_TIME = 10;
-    private static final int MAX_GREEN_TIME = 60;
+    private static final int DEFAULT_MIN_GREEN_TIME = 10;
+    private static final int DEFAULT_MAX_GREEN_TIME = 60;
     private static final int YELLOW_TIME = 3;
     private static final int ALL_RED_TIME = 2;
+    private static final int EMERGENCY_GREEN_TIME = 15;
 
     private final Map<Direction, TrafficLight> trafficLights;
     private final Intersection intersection;
     private TrafficPhase currentPhase;
     private PhaseState phaseState;
+    private TrafficMode trafficMode;
     private int phaseTimer;
+    private boolean emergencyMode;
+    private Direction emergencyDirection;
 
     public TrafficLightController(Intersection intersection) {
+        this(intersection, TrafficMode.NORMAL);
+    }
+
+    public TrafficLightController(Intersection intersection, TrafficMode trafficMode) {
         this.intersection = intersection;
         this.trafficLights = new EnumMap<>(Direction.class);
         this.currentPhase = TrafficPhase.NORTH_SOUTH;
         this.phaseState = PhaseState.GREEN;
+        this.trafficMode = trafficMode;
         this.phaseTimer = 0;
+        this.emergencyMode = false;
+        this.emergencyDirection = null;
 
         initializeTrafficLights();
         startPhase();
@@ -35,11 +46,54 @@ public class TrafficLightController {
     }
 
     public void update() {
+        checkForEmergencyVehicles();
+
         decrementTimers();
 
         if (isPhaseTransitionNeeded()) {
             transitionToNextPhase();
         }
+    }
+
+    private void checkForEmergencyVehicles() {
+        for (Direction direction : Direction.values()) {
+            Road road = intersection.getRoad(direction);
+            if (road.hasEmergencyVehicles() && !emergencyMode) {
+                activateEmergencyMode(direction);
+                return;
+            }
+        }
+
+        // Deactivate emergency mode if no more emergency vehicles
+        if (emergencyMode && emergencyDirection != null) {
+            Road emergencyRoad = intersection.getRoad(emergencyDirection);
+            if (!emergencyRoad.hasEmergencyVehicles()) {
+                deactivateEmergencyMode();
+            }
+        }
+    }
+
+    private void activateEmergencyMode(Direction emergencyDirection) {
+        this.emergencyMode = true;
+        this.emergencyDirection = emergencyDirection;
+        this.phaseTimer = EMERGENCY_GREEN_TIME;
+        this.phaseState = PhaseState.GREEN;
+
+        // Set emergency direction to green, all others to red
+        for (Direction direction : Direction.values()) {
+            if (direction == emergencyDirection) {
+                trafficLights.get(direction).setState(TrafficLightState.GREEN, EMERGENCY_GREEN_TIME);
+            } else {
+                trafficLights.get(direction).setState(TrafficLightState.RED, EMERGENCY_GREEN_TIME);
+            }
+        }
+    }
+
+    private void deactivateEmergencyMode() {
+        this.emergencyMode = false;
+        this.emergencyDirection = null;
+        // Resume normal operation
+        startPhase();
     }
 
     private void decrementTimers() {
@@ -54,6 +108,12 @@ public class TrafficLightController {
     }
 
     private void transitionToNextPhase() {
+        if (emergencyMode) {
+            // In emergency mode, just maintain the current state
+            activateEmergencyMode(emergencyDirection);
+            return;
+        }
+
         switch (phaseState) {
             case GREEN:
                 setYellowPhase();
@@ -86,8 +146,26 @@ public class TrafficLightController {
     }
 
     private void switchToNextPhase() {
-        currentPhase = currentPhase.getNext();
+        currentPhase = selectNextPhase();
         startPhase();
+    }
+
+    private TrafficPhase selectNextPhase() {
+        // Intelligent phase selection based on waiting vehicles
+        int nsWeight = intersection.getRoad(Direction.NORTH).calculateWeight() +
+                intersection.getRoad(Direction.SOUTH).calculateWeight();
+        int ewWeight = intersection.getRoad(Direction.EAST).calculateWeight() +
+                intersection.getRoad(Direction.WEST).calculateWeight();
+
+        // If current phase has much more weight, continue with it
+        if (currentPhase == TrafficPhase.NORTH_SOUTH && nsWeight > ewWeight * 2) {
+            return TrafficPhase.NORTH_SOUTH;
+        } else if (currentPhase == TrafficPhase.EAST_WEST && ewWeight > nsWeight * 2) {
+            return TrafficPhase.EAST_WEST;
+        }
+
+        // Otherwise, alternate phases
+        return currentPhase.getNext();
     }
 
     private void startPhase() {
@@ -105,30 +183,52 @@ public class TrafficLightController {
     }
 
     private int calculateGreenTime() {
-        int totalWaiting = 0;
-        int phaseWaiting = 0;
+        int totalWeight = 0;
+        int phaseWeight = 0;
 
         for (Direction direction : Direction.values()) {
-            int waiting = intersection.getWaitingVehiclesCount(direction);
-            totalWaiting += waiting;
+            int weight = intersection.getRoad(direction).calculateWeight();
+            totalWeight += weight;
 
             if (currentPhase.isDirectionAllowed(direction)) {
-                phaseWaiting += waiting;
+                phaseWeight += weight;
             }
         }
 
-        if (totalWaiting == 0) {
-            return MIN_GREEN_TIME;
+        if (totalWeight == 0) {
+            return (int) (trafficMode.getMinGreenTime() * trafficMode.getTimingMultiplier());
         }
 
-        double ratio = (double) phaseWaiting / totalWaiting;
-        int adaptiveTime = (int) (MIN_GREEN_TIME + ratio * (MAX_GREEN_TIME - MIN_GREEN_TIME));
+        double ratio = (double) phaseWeight / totalWeight;
+        int baseTime = trafficMode.getMinGreenTime() +
+                (int) (ratio * (trafficMode.getMaxGreenTime() - trafficMode.getMinGreenTime()));
 
-        return Math.max(MIN_GREEN_TIME, Math.min(MAX_GREEN_TIME, adaptiveTime));
+        return (int) Math.max(trafficMode.getMinGreenTime(),
+                Math.min(trafficMode.getMaxGreenTime(),
+                        baseTime * trafficMode.getTimingMultiplier()));
     }
 
     public boolean canVehiclesPass(Direction direction) {
+        if (emergencyMode) {
+            return direction == emergencyDirection;
+        }
         return trafficLights.get(direction).canVehiclesPass();
+    }
+
+    public void setTrafficMode(TrafficMode mode) {
+        this.trafficMode = mode;
+    }
+
+    public TrafficMode getTrafficMode() {
+        return trafficMode;
+    }
+
+    public boolean isEmergencyMode() {
+        return emergencyMode;
+    }
+
+    public Direction getEmergencyDirection() {
+        return emergencyDirection;
     }
 
     public TrafficLight getTrafficLight(Direction direction) {
@@ -150,7 +250,12 @@ public class TrafficLightController {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("TrafficLightController{\n");
-        sb.append("  Phase: ").append(currentPhase).append(" (").append(phaseState).append(")\n");
+        sb.append("  Mode: ").append(trafficMode).append("\n");
+        if (emergencyMode) {
+            sb.append("  EMERGENCY MODE: ").append(emergencyDirection).append("\n");
+        } else {
+            sb.append("  Phase: ").append(currentPhase).append(" (").append(phaseState).append(")\n");
+        }
         sb.append("  Timer: ").append(phaseTimer).append("\n");
         for (Map.Entry<Direction, TrafficLight> entry : trafficLights.entrySet()) {
             sb.append("  ").append(entry.getValue()).append("\n");
